@@ -1,0 +1,4 @@
+# The CSV is a generated artifact — never commit it (it's reproduced at build time).
+spacecraft_telemetry_events.csv
+__pycache__/
+.venv/
