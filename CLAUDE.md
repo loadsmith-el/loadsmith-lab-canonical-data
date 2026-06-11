@@ -25,13 +25,20 @@ repo is and the schema it defines, read [README.md](README.md), or
   types, and null rates in [README.md](README.md) are canonical. Every
   consumer — every image's `init.sql` in `loadsmith-lab-images` — must match
   exactly (column order = CSV column order; empty string = NULL).
+- **This repo owns the dataset version.** The [`VERSION`](VERSION) file holds
+  the canonical revision string (e.g. `v1`). It is the single source of truth
+  for "which dataset is this": the git tag, this `VERSION` file, and each
+  consuming image's Dockerfile `ARG DATA_REF` must all be the same string. The
+  image CI derives its published `:data-<ref>` tag from `DATA_REF`, so a drift
+  here makes that tag lie.
 - **Never commit the generated CSV.** It's gitignored
   (`spacecraft_telemetry_events.csv`) — service images clone this repo at
   build time and run `generate.py` themselves.
 - **Changing the schema is a breaking change for every image.** If you add,
   remove, reorder, or retype a column:
   1. Update `generate.py` and the schema table/SQL in `README.md`.
-  2. Commit, then **bump the tag** (e.g. `v1` → `v2`).
+  2. **Bump `VERSION`** (e.g. `v1` → `v2`), commit, then create the matching
+     git tag (`v2`) on that commit — tag name == `VERSION` content.
   3. Update every image's `init.sql` in `loadsmith-lab-images` to match, and
      bump that image's Dockerfile `ARG DATA_REF` to the new tag.
 

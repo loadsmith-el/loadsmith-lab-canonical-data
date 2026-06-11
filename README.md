@@ -18,6 +18,23 @@ python generate.py     # → spacecraft_telemetry_events.csv (next to the script
 
 No dependencies, no `pip install` — Python 3 standard library only.
 
+## Versioning
+
+The [`VERSION`](VERSION) file is the source of truth for the dataset revision
+(currently `v1`). By convention this string is mirrored in three places that
+must always agree:
+
+- this `VERSION` file,
+- the git **tag** on the same commit (`v1`),
+- each consuming image's Dockerfile `ARG DATA_REF` in
+  [`loadsmith-lab-images`](../loadsmith-lab-images).
+
+Service images pin a specific `DATA_REF` and the image CI publishes a derived
+`:data-<ref>` tag — so an image's data revision is an explicit, independent
+choice (decoupled from the service version). To cut a new revision, bump
+`VERSION`, commit, tag it, then re-pin the images you want on it (see the bump
+procedure in [CLAUDE.md](CLAUDE.md)).
+
 ## This repo is the schema source of truth
 
 The 34 columns, their order, types, and null rates below are **canonical**. Every
@@ -28,8 +45,9 @@ consumer must match them:
   in its database dialect and bulk-loads the CSV (header row present, empty = NULL);
 - the CSV column order is exactly the order below.
 
-When you change the schema here, **bump the tag** (images pin a ref like `v1`) and
-update every image's `init.sql` to match.
+When you change the schema here, **bump `VERSION` + the tag** (images pin a ref
+like `v1`) and update every image's `init.sql` to match — see
+[Versioning](#versioning).
 
 ## Schema
 
