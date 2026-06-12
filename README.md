@@ -7,7 +7,7 @@ type, generated deterministically with `seed=42`.
 This repo holds only the **generator** — never a committed CSV. Because
 `generate.py` is stdlib-only and fully deterministic, the CSV is a pure function
 of this source: every run reproduces it byte-for-byte, so there's nothing to
-store. Service images in `loadsmith-lab-images` clone this repo at **build time**,
+store. Service images in `loadsmith-lab-canonical-images` clone this repo at **build time**,
 run `generate.py`, and bake the resulting CSV into the image.
 
 ## Generating
@@ -27,7 +27,7 @@ must always agree:
 - this `VERSION` file,
 - the git **tag** on the same commit (`v1`),
 - each consuming image's Dockerfile `ARG DATA_REF` in
-  [`loadsmith-lab-images`](../loadsmith-lab-images).
+  [`loadsmith-lab-canonical-images`](../loadsmith-lab-canonical-images).
 
 Service images pin a specific `DATA_REF` and the image CI publishes a derived
 `:data-<ref>` tag — so an image's data revision is an explicit, independent
@@ -41,7 +41,7 @@ The 34 columns, their order, types, and null rates below are **canonical**. Ever
 consumer must match them:
 
 - each service image's `init.sql` (e.g.
-  `loadsmith-lab-images/images/postgres-15/init.sql`) recreates this exact schema
+  `loadsmith-lab-canonical-images/images/lab-postgres-15/init.sql`) recreates this exact schema
   in its database dialect and bulk-loads the CSV (header row present, empty = NULL);
 - the CSV column order is exactly the order below.
 

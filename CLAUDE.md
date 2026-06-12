@@ -12,7 +12,7 @@ repo is and the schema it defines, read [README.md](README.md), or
   user writes in Portuguese.
 - **Stdlib only, no dependencies.** `generate.py` must run with a bare
   `python3` — no `pip install`, no `requirements.txt`. This is what lets
-  service images in [`loadsmith-lab-images`](../loadsmith-lab-images) generate
+  service images in [`loadsmith-lab-canonical-images`](../loadsmith-lab-canonical-images) generate
   the dataset in a minimal `python:3-slim` build stage.
 - **Deterministic, always.** The generator is seeded (`seed = 42`). Any change
   must preserve byte-for-byte reproducibility for a given seed — the whole
@@ -23,7 +23,7 @@ repo is and the schema it defines, read [README.md](README.md), or
 
 - **This repo is the schema source of truth.** The 34 columns, their order,
   types, and null rates in [README.md](README.md) are canonical. Every
-  consumer — every image's `init.sql` in `loadsmith-lab-images` — must match
+  consumer — every image's `init.sql` in `loadsmith-lab-canonical-images` — must match
   exactly (column order = CSV column order; empty string = NULL).
 - **This repo owns the dataset version.** The [`VERSION`](VERSION) file holds
   the canonical revision string (e.g. `v1`). It is the single source of truth
@@ -39,7 +39,7 @@ repo is and the schema it defines, read [README.md](README.md), or
   1. Update `generate.py` and the schema table/SQL in `README.md`.
   2. **Bump `VERSION`** (e.g. `v1` → `v2`), commit, then create the matching
      git tag (`v2`) on that commit — tag name == `VERSION` content.
-  3. Update every image's `init.sql` in `loadsmith-lab-images` to match, and
+  3. Update every image's `init.sql` in `loadsmith-lab-canonical-images` to match, and
      bump that image's Dockerfile `ARG DATA_REF` to the new tag.
 
   Skipping step 2/3 leaves images pinned to the old schema silently working
@@ -54,4 +54,4 @@ md5sum spacecraft_telemetry_events.csv   # compare before/after a change to conf
 ```
 
 To verify an image still builds against this schema, see
-[`loadsmith-lab-images/CLAUDE.md`](../loadsmith-lab-images/CLAUDE.md).
+[`loadsmith-lab-canonical-images/CLAUDE.md`](../loadsmith-lab-canonical-images/CLAUDE.md).
