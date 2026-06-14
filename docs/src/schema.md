@@ -1,57 +1,16 @@
-# loadsmith-lab-canonical-data
+# Schema
 
-> 📖 **Full documentation:** <https://loadsmith-el.github.io/loadsmith-lab-canonical-data/>
-
-The canonical seed dataset for [loadsmith-lab](../loadsmith-lab): **100,000 rows
-of synthetic spacecraft telemetry**, 34 columns covering every Arrow-representable
-type, generated deterministically with `seed=42`.
-
-This repo holds only the **generator** — never a committed CSV. Because
-`generate.py` is stdlib-only and fully deterministic, the CSV is a pure function
-of this source: every run reproduces it byte-for-byte, so there's nothing to
-store. Service images in `loadsmith-lab-canonical-images` clone this repo at **build time**,
-run `generate.py`, and bake the resulting CSV into the image.
-
-## Generating
-
-```bash
-python generate.py     # → spacecraft_telemetry_events.csv (next to the script)
-```
-
-No dependencies, no `pip install` — Python 3 standard library only.
-
-## Versioning
-
-The [`VERSION`](VERSION) file is the source of truth for the dataset revision
-(currently `v1`). By convention this string is mirrored in three places that
-must always agree:
-
-- this `VERSION` file,
-- the git **tag** on the same commit (`v1`),
-- each consuming image's Dockerfile `ARG DATA_REF` in
-  [`loadsmith-lab-canonical-images`](../loadsmith-lab-canonical-images).
-
-Service images pin a specific `DATA_REF` and the image CI publishes a derived
-`:data-<ref>` tag — so an image's data revision is an explicit, independent
-choice (decoupled from the service version). To cut a new revision, bump
-`VERSION`, commit, tag it, then re-pin the images you want on it (see the bump
-procedure in [CLAUDE.md](CLAUDE.md)).
-
-## This repo is the schema source of truth
-
-The 34 columns, their order, types, and null rates below are **canonical**. Every
-consumer must match them:
+This repo is the **schema source of truth**. The 34 columns, their order, types,
+and null rates below are **canonical**. Every consumer must match them:
 
 - each service image's `init.sql` (e.g.
-  `loadsmith-lab-canonical-images/images/lab-postgres-15/init.sql`) recreates this exact schema
-  in its database dialect and bulk-loads the CSV (header row present, empty = NULL);
+  `loadsmith-lab-canonical-images/images/lab-postgres-15/init.sql`) recreates this
+  exact schema in its database dialect and bulk-loads the CSV (header row
+  present, empty = NULL);
 - the CSV column order is exactly the order below.
 
-When you change the schema here, **bump `VERSION` + the tag** (images pin a ref
-like `v1`) and update every image's `init.sql` to match — see
-[Versioning](#versioning).
-
-## Schema
+When you change the schema here, **bump `VERSION` + the tag** and update every
+image's `init.sql` to match — see [Versioning](./versioning.md).
 
 ```sql
 CREATE TABLE spacecraft_telemetry_events (
@@ -109,7 +68,7 @@ CREATE TABLE spacecraft_telemetry_events (
 );
 ```
 
-### Column reference
+## Column reference
 
 | # | Column | Postgres type | Arrow type | Nullable | Description |
 |---|---|---|---|---|---|
@@ -148,20 +107,7 @@ CREATE TABLE spacecraft_telemetry_events (
 | 33 | `updated_at` | `TIMESTAMP` | `Timestamp(ms)` | No | `created_at` + 0–3,600s |
 | 34 | `deleted_at` | `TIMESTAMP` | `Timestamp(ms)` | Yes (~92%) | `created_at` + 1–365 days when set |
 
-### Data pools
-
-- **Spacecrafts (20):** SC-001 … SC-020
-- **Missions (5):** MISSION-ALPHA, MISSION-BETA, MISSION-GAMMA, MISSION-DELTA, MISSION-EPSILON
-- **Sensor types → names:** THERMAL (core_temp, hull_temp, engine_temp, solar_panel_temp);
-  RADIATION (gamma_detector, neutron_flux, cosmic_ray_counter, alpha_particle_sensor);
-  POWER (main_bus_voltage, battery_cell_1, solar_array_output, power_regulator);
-  NAVIGATION (gyroscope_x, gyroscope_y, star_tracker, inertial_nav_unit);
-  COMMS (uplink_signal, downlink_signal, antenna_temperature, transponder_power)
-- **Severities (weighted):** LOW 60%, MEDIUM 25%, HIGH 10%, CRITICAL 5%
-- **Tags pool:** nominal, anomaly, warning, science, maintenance, downlink, uplink, attitude
-  (0–3 per row, comma-separated)
-
-### Why DECIMAL/TIME columns are Utf8 in Arrow
+## Why DECIMAL/TIME columns are Utf8 in Arrow
 
 The Postgres source plugin uses `simple_query` (the text wire protocol), so every
 value arrives as its exact string form — `DECIMAL(18,6)` as `"1234567.890000"`.
@@ -169,7 +115,3 @@ Arrow has no native decimal type that covers arbitrary precision losslessly, so
 the source preserves the text representation and maps all NUMERIC, DECIMAL, and
 TIME columns to `Utf8`. A destination needing native decimals parses the string
 itself.
-
-## License
-
-Licensed under the [Apache License, Version 2.0](LICENSE).

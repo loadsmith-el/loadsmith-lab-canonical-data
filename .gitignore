@@ -2,3 +2,6 @@
 spacecraft_telemetry_events.csv
 __pycache__/
 .venv/
+
+# mdbook build output (generated from docs/src/)
+/docs/book/
