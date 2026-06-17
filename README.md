@@ -2,7 +2,7 @@
 
 > 📖 **Full documentation:** <https://loadsmith-el.github.io/loadsmith-lab-canonical-data/>
 
-The canonical seed dataset for [loadsmith-lab](../loadsmith-lab): **100,000 rows
+The canonical seed dataset for [loadsmith-lab](https://github.com/loadsmith-el/loadsmith-lab): **100,000 rows
 of synthetic spacecraft telemetry**, 34 columns covering every Arrow-representable
 type, generated deterministically with `seed=42`.
 
@@ -29,7 +29,7 @@ must always agree:
 - this `VERSION` file,
 - the git **tag** on the same commit (`v1`),
 - each consuming image's Dockerfile `ARG DATA_REF` in
-  [`loadsmith-lab-canonical-images`](../loadsmith-lab-canonical-images).
+  [`loadsmith-lab-canonical-images`](https://github.com/loadsmith-el/loadsmith-lab-canonical-images).
 
 Service images pin a specific `DATA_REF` and the image CI publishes a derived
 `:data-<ref>` tag — so an image's data revision is an explicit, independent
