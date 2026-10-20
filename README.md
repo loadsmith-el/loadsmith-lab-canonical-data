@@ -3,8 +3,9 @@
 > 📖 **Full documentation:** <https://loadsmith-el.github.io/loadsmith-lab-canonical-data/>
 
 The canonical seed dataset for [loadsmith-lab](https://github.com/loadsmith-el/loadsmith-lab): **100,000 rows
-of synthetic spacecraft telemetry**, 34 columns covering every Arrow-representable
-type, generated deterministically with `seed=42`.
+of synthetic spacecraft telemetry**, 34 columns spanning the common scalar
+types (strings, integers, floats, booleans, decimals, dates, times and
+timestamps), generated deterministically with `seed=42`.
 
 This repo holds only the **generator** — never a committed CSV. Because
 `generate.py` is stdlib-only and fully deterministic, the CSV is a pure function
@@ -34,8 +35,8 @@ must always agree:
 Service images pin a specific `DATA_REF` and the image CI publishes a derived
 `:data-<ref>` tag — so an image's data revision is an explicit, independent
 choice (decoupled from the service version). To cut a new revision, bump
-`VERSION`, commit, tag it, then re-pin the images you want on it (see the bump
-procedure in [CLAUDE.md](CLAUDE.md)).
+`VERSION`, commit, tag it, then re-pin the images you want on it (see
+[Cutting a new revision](https://loadsmith-el.github.io/loadsmith-lab-canonical-data/versioning.html#cutting-a-new-revision)).
 
 ## This repo is the schema source of truth
 
@@ -45,10 +46,14 @@ consumer must match them:
 - each service image's `init.sql` (e.g.
   `loadsmith-lab-canonical-images/images/lab-postgres-15/init.sql`) recreates this exact schema
   in its database dialect and bulk-loads the CSV (header row present, empty = NULL);
+- `lab-mock-graph` (no `init.sql`) bakes the same CSV, serves it verbatim and
+  derives a 100-row List fixture from it generically (column-agnostic), so it
+  only needs its `DATA_REF` re-pinned;
 - the CSV column order is exactly the order below.
 
 When you change the schema here, **bump `VERSION` + the tag** (images pin a ref
-like `v1`) and update every image's `init.sql` to match — see
+like `v1`) and update every SQL image's `init.sql` to match, then re-pin `DATA_REF` in
+every consuming image (including `lab-mock-graph`) — see
 [Versioning](#versioning).
 
 ## Schema
@@ -99,7 +104,7 @@ CREATE TABLE spacecraft_telemetry_events (
     -- Payload and notes
     operator_notes   TEXT,                           -- ~30% null
     raw_payload_json TEXT,                           -- ~40% null
-    tags             TEXT,                           -- comma-separated; ~30% null
+    tags             TEXT,                           -- comma-separated; ~25% null
     checksum         CHAR(64),                       -- SHA-256 hex; ~5% null
 
     -- Audit timestamps
@@ -111,9 +116,9 @@ CREATE TABLE spacecraft_telemetry_events (
 
 ### Column reference
 
-| # | Column | Postgres type | Arrow type | Nullable | Description |
+| # | Column | Postgres type | Arrow type (postgres source) | Nullable | Description |
 |---|---|---|---|---|---|
-| 1 | `id` | `VARCHAR(36)` | `Utf8` | No | UUID v4 string |
+| 1 | `id` | `VARCHAR(36)` | `Utf8` | No | Seeded random 128-bit UUID-formatted string (version/variant bits not set, so not strictly v4) |
 | 2 | `spacecraft_id` | `VARCHAR(50)` | `Utf8` | No | SC-001 … SC-020 |
 | 3 | `mission_id` | `VARCHAR(50)` | `Utf8` | No | MISSION-ALPHA … MISSION-EPSILON |
 | 4 | `event_sequence` | `BIGINT` | `Int64` | No | 1–100,000, unique per row |
@@ -142,8 +147,8 @@ CREATE TABLE spacecraft_telemetry_events (
 | 27 | `payload_mass_kg` | `DECIMAL(10,3)` | `Utf8` | Yes (~30%) | 100–5,000 kg |
 | 28 | `operator_notes` | `TEXT` | `Utf8` | Yes (~30%) | Free-form sentence |
 | 29 | `raw_payload_json` | `TEXT` | `Utf8` | Yes (~40%) | Simulated JSON payload string |
-| 30 | `tags` | `TEXT` | `Utf8` | Yes (~30%) | Comma-separated from pool of 8 |
-| 31 | `checksum` | `CHAR(64)` | `Utf8` | Yes (~5%) | SHA-256 hex of `id + event_sequence` |
+| 30 | `tags` | `TEXT` | `Utf8` | Yes (~25%) | Comma-separated from pool of 8 |
+| 31 | `checksum` | `CHAR(64)` | `Utf8` | Yes (~5%) | SHA-256 hex of `id` concatenated with `event_sequence - 1` (the 0-based row index) |
 | 32 | `created_at` | `TIMESTAMP` | `Timestamp(ms)` | No | Same as `event_timestamp` |
 | 33 | `updated_at` | `TIMESTAMP` | `Timestamp(ms)` | No | `created_at` + 0–3,600s |
 | 34 | `deleted_at` | `TIMESTAMP` | `Timestamp(ms)` | Yes (~92%) | `created_at` + 1–365 days when set |
@@ -153,10 +158,10 @@ CREATE TABLE spacecraft_telemetry_events (
 - **Spacecrafts (20):** SC-001 … SC-020
 - **Missions (5):** MISSION-ALPHA, MISSION-BETA, MISSION-GAMMA, MISSION-DELTA, MISSION-EPSILON
 - **Sensor types → names:** THERMAL (core_temp, hull_temp, engine_temp, solar_panel_temp);
-  RADIATION (gamma_detector, neutron_flux, cosmic_ray_counter, alpha_particle_sensor);
-  POWER (main_bus_voltage, battery_cell_1, solar_array_output, power_regulator);
-  NAVIGATION (gyroscope_x, gyroscope_y, star_tracker, inertial_nav_unit);
-  COMMS (uplink_signal, downlink_signal, antenna_temperature, transponder_power)
+  RADIATION (cosmic_ray_counter, gamma_detector, xray_sensor);
+  POWER (solar_output, battery_monitor, power_bus_voltage);
+  NAVIGATION (gps_receiver, star_tracker, imu_sensor, gyroscope);
+  COMMS (antenna_signal, transponder, uplink_receiver)
 - **Severities (weighted):** LOW 60%, MEDIUM 25%, HIGH 10%, CRITICAL 5%
 - **Tags pool:** nominal, anomaly, warning, science, maintenance, downlink, uplink, attitude
   (0–3 per row, comma-separated)
@@ -169,6 +174,10 @@ Arrow has no native decimal type that covers arbitrary precision losslessly, so
 the source preserves the text representation and maps all NUMERIC, DECIMAL, and
 TIME columns to `Utf8`. A destination needing native decimals parses the string
 itself.
+
+The Arrow types in the column reference are what the Postgres source produces.
+Other sources map differently (e.g. the Oracle source maps NUMBER and all
+temporal types to `Utf8`); see each plugin's docs.
 
 ## License
 

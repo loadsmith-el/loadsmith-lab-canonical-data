@@ -2,8 +2,9 @@
 
 This repository is the **canonical seed dataset** for
 [loadsmith-lab](https://loadsmith-el.github.io/loadsmith-lab/): **100,000 rows of
-synthetic spacecraft telemetry**, 34 columns covering every Arrow-representable
-type, generated deterministically with `seed = 42`.
+synthetic spacecraft telemetry**, 34 columns spanning the common scalar
+types (strings, integers, floats, booleans, decimals, dates, times and
+timestamps), generated deterministically with `seed = 42`.
 
 It holds only the **generator** — never a committed CSV. Because `generate.py` is
 stdlib-only and fully deterministic, the CSV is a pure function of this source:
@@ -20,7 +21,7 @@ every consumer:
 
 - **The dataset** — the generator and its output (see [Generating](./generating.md)).
 - **The schema** — the 34 columns, their order, types, and null rates (see
-  [Schema](./schema.md)). Every image's `init.sql` must recreate exactly this
+  [Schema](./schema.md)). Every SQL image's `init.sql` must recreate exactly this
   schema.
 
 Changing the schema is a **breaking change for every image** — it always comes

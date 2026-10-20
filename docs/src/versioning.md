@@ -23,9 +23,12 @@ for every image.** If you add, remove, reorder, or retype a column:
    page (and the repo `README.md`).
 2. **Bump `VERSION`** (e.g. `v1` → `v2`), commit, then create the matching git
    **tag** (`v2`) on that commit — tag name == `VERSION` content.
-3. Update every image's `init.sql` in
+3. Update the `init.sql` of each SQL image (`lab-postgres-15`, `lab-mysql-8`,
+   `lab-oracle`) in
    [`loadsmith-lab-canonical-images`](https://loadsmith-el.github.io/loadsmith-lab-canonical-images/)
-   to match, and bump that image's Dockerfile `ARG DATA_REF` to the new tag.
+   to match, and bump `ARG DATA_REF` to the new tag in every consuming image's
+   Dockerfile, including `lab-mock-graph` (which has no `init.sql`; its
+   `server.py` passes CSV columns through generically).
 
 Skipping steps 2/3 leaves images pinned to the old schema silently working
 against new generator output (or vice versa) — always bump and re-pin together.

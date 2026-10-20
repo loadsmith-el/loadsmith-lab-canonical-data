@@ -8,11 +8,10 @@ realistic but bounded and reproducible.
   MISSION-EPSILON
 - **Sensor types → names:**
   - THERMAL: core_temp, hull_temp, engine_temp, solar_panel_temp
-  - RADIATION: gamma_detector, neutron_flux, cosmic_ray_counter,
-    alpha_particle_sensor
-  - POWER: main_bus_voltage, battery_cell_1, solar_array_output, power_regulator
-  - NAVIGATION: gyroscope_x, gyroscope_y, star_tracker, inertial_nav_unit
-  - COMMS: uplink_signal, downlink_signal, antenna_temperature, transponder_power
+  - RADIATION: cosmic_ray_counter, gamma_detector, xray_sensor
+  - POWER: solar_output, battery_monitor, power_bus_voltage
+  - NAVIGATION: gps_receiver, star_tracker, imu_sensor, gyroscope
+  - COMMS: antenna_signal, transponder, uplink_receiver
 - **Severities (weighted):** LOW 60%, MEDIUM 25%, HIGH 10%, CRITICAL 5%
 - **Tags pool:** nominal, anomaly, warning, science, maintenance, downlink,
   uplink, attitude (0–3 per row, comma-separated)

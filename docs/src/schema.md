@@ -7,10 +7,13 @@ and null rates below are **canonical**. Every consumer must match them:
   `loadsmith-lab-canonical-images/images/lab-postgres-15/init.sql`) recreates this
   exact schema in its database dialect and bulk-loads the CSV (header row
   present, empty = NULL);
+- `lab-mock-graph` (no `init.sql`) bakes the same CSV, serves it verbatim and
+  derives a 100-row List fixture from it generically (column-agnostic);
 - the CSV column order is exactly the order below.
 
-When you change the schema here, **bump `VERSION` + the tag** and update every
-image's `init.sql` to match — see [Versioning](./versioning.md).
+When you change the schema here, **bump `VERSION` + the tag**, update every
+SQL image's `init.sql` to match and re-pin `DATA_REF` in every consuming image
+(including `lab-mock-graph`) — see [Versioning](./versioning.md).
 
 ```sql
 CREATE TABLE spacecraft_telemetry_events (
@@ -58,7 +61,7 @@ CREATE TABLE spacecraft_telemetry_events (
     -- Payload and notes
     operator_notes   TEXT,                           -- ~30% null
     raw_payload_json TEXT,                           -- ~40% null
-    tags             TEXT,                           -- comma-separated; ~30% null
+    tags             TEXT,                           -- comma-separated; ~25% null
     checksum         CHAR(64),                       -- SHA-256 hex; ~5% null
 
     -- Audit timestamps
@@ -70,9 +73,9 @@ CREATE TABLE spacecraft_telemetry_events (
 
 ## Column reference
 
-| # | Column | Postgres type | Arrow type | Nullable | Description |
+| # | Column | Postgres type | Arrow type (postgres source) | Nullable | Description |
 |---|---|---|---|---|---|
-| 1 | `id` | `VARCHAR(36)` | `Utf8` | No | UUID v4 string |
+| 1 | `id` | `VARCHAR(36)` | `Utf8` | No | Seeded random 128-bit UUID-formatted string (version/variant bits not set, so not strictly v4) |
 | 2 | `spacecraft_id` | `VARCHAR(50)` | `Utf8` | No | SC-001 … SC-020 |
 | 3 | `mission_id` | `VARCHAR(50)` | `Utf8` | No | MISSION-ALPHA … MISSION-EPSILON |
 | 4 | `event_sequence` | `BIGINT` | `Int64` | No | 1–100,000, unique per row |
@@ -101,8 +104,8 @@ CREATE TABLE spacecraft_telemetry_events (
 | 27 | `payload_mass_kg` | `DECIMAL(10,3)` | `Utf8` | Yes (~30%) | 100–5,000 kg |
 | 28 | `operator_notes` | `TEXT` | `Utf8` | Yes (~30%) | Free-form sentence |
 | 29 | `raw_payload_json` | `TEXT` | `Utf8` | Yes (~40%) | Simulated JSON payload string |
-| 30 | `tags` | `TEXT` | `Utf8` | Yes (~30%) | Comma-separated from pool of 8 |
-| 31 | `checksum` | `CHAR(64)` | `Utf8` | Yes (~5%) | SHA-256 hex of `id + event_sequence` |
+| 30 | `tags` | `TEXT` | `Utf8` | Yes (~25%) | Comma-separated from pool of 8 |
+| 31 | `checksum` | `CHAR(64)` | `Utf8` | Yes (~5%) | SHA-256 hex of `id` concatenated with `event_sequence - 1` (the 0-based row index) |
 | 32 | `created_at` | `TIMESTAMP` | `Timestamp(ms)` | No | Same as `event_timestamp` |
 | 33 | `updated_at` | `TIMESTAMP` | `Timestamp(ms)` | No | `created_at` + 0–3,600s |
 | 34 | `deleted_at` | `TIMESTAMP` | `Timestamp(ms)` | Yes (~92%) | `created_at` + 1–365 days when set |
@@ -115,3 +118,7 @@ Arrow has no native decimal type that covers arbitrary precision losslessly, so
 the source preserves the text representation and maps all NUMERIC, DECIMAL, and
 TIME columns to `Utf8`. A destination needing native decimals parses the string
 itself.
+
+The Arrow types in the column reference are what the Postgres source produces.
+Other sources map differently (e.g. the Oracle source maps NUMBER and all
+temporal types to `Utf8`); see each plugin's docs.
